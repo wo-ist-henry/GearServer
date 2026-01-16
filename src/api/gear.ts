@@ -2,31 +2,54 @@ import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { gearsTable } from '../db/schema.js'
+import {serve} from "@hono/node-server";
 
 export const gearRoutes = new Hono()
 
-gearRoutes.get('/', async (c) => {
-  const gears = await db.select().from(gearsTable)
-  return c.json(gears)
-})
-
-gearRoutes.get('/:id', async (c) => {
-  const id = parseInt(c.req.param('id'))
-  const gear = await db.select().from(gearsTable).where(eq(gearsTable.id, id))
-  if (gear.length === 0) {
-    return c.json({ error: 'Gear not found' }, 404)
-  }
-  return c.json(gear[0])
+gearRoutes.get('/:id', (c) => {
+  const  id = c.req.param('id')
+  return c.json({ message: `Gear ID: ${id}` })
 })
 
 gearRoutes.post('/', async (c) => {
-  const body = await c.req.json()
-  const newGear = await db.insert(gearsTable).values(body).returning()
-  return c.json(newGear[0], 201)
+  try {
+    const { name, type, yearOfProduction } = await c.req.json()
+
+    if (!name || !type || !yearOfProduction) {
+      return c.json({ error: 'Name, type, and yearOfProduction are required' }, 400)
+    }
+
+    return c.json({
+      gear: { id: 1, name, type, yearOfProduction }
+    }, 201)  // 201 Created
+  } catch (error) {
+    return c.json({ error: 'Failed to create gear' }, 500)
+  }
+})
+
+gearRoutes.put('/:id', async (c) => {
+  const id = c.req.param('id')
+
+  try {
+    const { name, type, yearOfProduction } = await c.req.json()
+
+    return c.json({
+      gear: { id: parseInt(id), name, type, yearOfProduction }
+    })
+  } catch (error) {
+    return c.json({ error: 'Failed to update gear' }, 500)
+  }
 })
 
 gearRoutes.delete('/:id', async (c) => {
-  const id = parseInt(c.req.param('id'))
-  await db.delete(gearsTable).where(eq(gearsTable.id, id))
-  return c.json({ success: true })
+  const id = c.req.param('id')
+
+  try {
+    return c.json({
+      message: 'Gear deleted successfully',
+      id: parseInt(id)
+    })
+  } catch (error) {
+    return c.json({ error: 'Failed to delete gear' }, 500)
+  }
 })

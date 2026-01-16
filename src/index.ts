@@ -1,13 +1,5 @@
 import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
-
-const api = new Hono().basePath('/api')
-
-api.route('/api', api)
-
-api.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+import { api } from "./api/index.js"
 
 serve({
   fetch: api.fetch,
