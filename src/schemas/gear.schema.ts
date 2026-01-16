@@ -11,10 +11,15 @@ export const CreateGearSchema = z.object({
   name: z.string().min(1),
   type: z.string().min(1),
   yearOfProduction: z.number(),
+  userId: z.number(),
 });
 
 export const GearParamsSchema = z.object({
   id: z.string(),
+});
+
+export const GearUserParamsSchema = z.object({
+  userId: z.string(),
 });
 
 export const ErrorSchema = z.object({
@@ -24,6 +29,7 @@ export const ErrorSchema = z.object({
 export const DeleteResponseSchema = z.object({
   message: z.string(),
   id: z.number(),
+  userId: z.number(),
 });
 
 export const GearResponseSchema = z.object({

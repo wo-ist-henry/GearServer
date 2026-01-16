@@ -1,7 +1,7 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { gearsTable } from "../db/schema.js";
+import { gearsTable, userGearsTable } from "../db/schema.js";
 import {
   GearSchema,
   CreateGearSchema,
@@ -9,6 +9,7 @@ import {
   ErrorSchema,
   DeleteResponseSchema,
   GearResponseSchema,
+  GearUserParamsSchema,
 } from "../schemas/gear.schema.js";
 
 export const gearRoutes = new OpenAPIHono();
@@ -43,6 +44,45 @@ gearRoutes.openapi(getGearRoute, async (c) => {
     return c.json({ error: "Gear not found" }, 404);
   }
   return c.json(gear[0], 200);
+});
+
+// GET user gear by ID
+const getUserGearRoute = createRoute({
+  method: "get",
+  path: "/user/{userId}",
+  tags: ["Gear"],
+  summary: "Get gear by User ID",
+  description: "Retrieves gear associated with a specific user ID",
+  request: {
+    params: GearUserParamsSchema,
+  },
+  responses: {
+    200: {
+      description: "Gear found",
+      content: { "application/json": { schema: GearSchema.array() } },
+    },
+    404: {
+      description: "Gear not found",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+  },
+});
+
+gearRoutes.openapi(getUserGearRoute, async (c) => {
+  const userId = parseInt(c.req.param("userId"));
+
+  const userGears = await db
+    .select({
+      id: gearsTable.id,
+      name: gearsTable.name,
+      type: gearsTable.type,
+      yearOfProduction: gearsTable.yearOfProduction,
+    })
+    .from(gearsTable)
+    .innerJoin(userGearsTable, eq(gearsTable.id, userGearsTable.gearId))
+    .where(eq(userGearsTable.userId, userId));
+
+  return c.json(userGears, 200);
 });
 
 // POST /
@@ -84,6 +124,11 @@ gearRoutes.openapi(createGearRoute, async (c) => {
       .insert(gearsTable)
       .values({ name, type, yearOfProduction })
       .returning();
+
+    await db.insert(userGearsTable).values({
+      userId: c.req.valid("json").userId,
+      gearId: insertedGear[0].id,
+    });
 
     return c.json({ gear: insertedGear[0] }, 201);
   } catch (error) {
@@ -171,12 +216,15 @@ const deleteGearRoute = createRoute({
 
 gearRoutes.openapi(deleteGearRoute, async (c) => {
   const id = parseInt(c.req.param("id"));
+  // const userId = parseInt(c.req.param("userId"));
 
   try {
     const deletedGear = await db
       .delete(gearsTable)
       .where(eq(gearsTable.id, id))
       .returning();
+
+    await db.delete(userGearsTable).where(eq(userGearsTable.gearId, id));
 
     if (deletedGear.length === 0) {
       return c.json({ error: "Gear not found" }, 404);

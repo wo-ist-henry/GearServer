@@ -19,10 +19,10 @@ export const userGearsTable = pgTable(
   {
     userId: integer()
       .notNull()
-      .references(() => usersTable.id),
+      .references(() => usersTable.id, { onDelete: "cascade" }),
     gearId: integer()
       .notNull()
-      .references(() => gearsTable.id),
+      .references(() => gearsTable.id, { onDelete: "cascade" }),
   },
   (table) => ({
     primaryKey: [table.userId, table.gearId],
