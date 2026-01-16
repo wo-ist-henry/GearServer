@@ -76,6 +76,10 @@ const createGearRoute = createRoute({
 gearRoutes.openapi(createGearRoute, async (c) => {
   try {
     const { name, type, yearOfProduction } = c.req.valid('json')
+
+    if(!name || !type || !yearOfProduction) {
+        return c.json({ error: 'Invalid input data' }, 400)
+    }
     const insertedGear = await db.insert(gearsTable).values({ name, type, yearOfProduction }).returning()
 
     return c.json({ gear: insertedGear[0] }, 201)
